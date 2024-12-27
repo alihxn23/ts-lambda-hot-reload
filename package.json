@@ -1,0 +1,19 @@
+{
+  "name": "ts-lambda-hot-reload",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "bin": {
+    "my-node-cli": "./index.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "commander": "^12.1.0",
+    "yaml": "^2.6.1"
+  }
+}
