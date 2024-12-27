@@ -1,17 +1,20 @@
 {
-  "name": "ts-lambda-hot-reload",
+  "name": "@alihxn/ts-lambda-hot-reload",
   "version": "1.0.0",
-  "description": "",
+  "description": "`npx ts-lambda-hot-reload`",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "type": "module",
   "bin": {
-    "ts-lambda-hot-reload": "./index.js"
+    "ts-lambda-hot-reload": "index.js"
   },
   "keywords": [],
-  "author": "",
+  "author": "Muhammad Ali Hasan",
+  "repository": {
+    "url": "git+https://github.com/alihxn23/ts-lambda-hot-reload.git"
+  },
   "license": "ISC",
   "dependencies": {
     "@inquirer/prompts": "^7.2.1",
@@ -19,5 +22,10 @@
     "fuzzysort": "^3.1.0",
     "nodemon": "^3.1.9",
     "yaml": "^2.6.1"
-  }
+  },
+  "devDependencies": {},
+  "bugs": {
+    "url": "https://github.com/alihxn23/ts-lambda-hot-reload/issues"
+  },
+  "homepage": "https://github.com/alihxn23/ts-lambda-hot-reload#readme"
 }
