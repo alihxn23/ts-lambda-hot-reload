@@ -8,7 +8,7 @@
   },
   "type": "module",
   "bin": {
-    "my-node-cli": "./index.js"
+    "ts-lambda-hot-reload": "./index.js"
   },
   "keywords": [],
   "author": "",
