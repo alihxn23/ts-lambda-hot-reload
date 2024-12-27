@@ -1,13 +1,45 @@
 #!/usr/bin/env node
 
-import { program } from "commander";
+import { checkbox, input, search } from "@inquirer/prompts";
+import fs from "fs";
+import nodemon from "nodemon";
+import YAML from "yaml";
 
-program
-  .version("1.0.0")
-  .description("My Node CLI")
-  .option("-n, --name <type>", "Add your name")
-  .action((options) => {
-    console.log(`Hey, ${options.name}!`);
-  });
+// calling esbuild
+// node ./${esbuild.js filename} --dir {artifacts_directory}
 
-program.parse(process.argv);
+// artifacts directory: ${pwd}/.aws-sam/build/${FunctionName}
+const artifacts_directory = `${process.cwd()}/.aws-sam/build`;
+console.log(artifacts_directory);
+
+const file = fs.readFileSync("./template.yaml", "utf8");
+const yaml = YAML.parse(file, { logLevel: "error" });
+const functionNames = [];
+Object.entries(yaml.Resources).forEach(([k, v]) => {
+  if (v.Type === "AWS::Serverless::Function") {
+    functionNames.push(k);
+  }
+});
+// console.log(functionNames);
+
+const answer = await checkbox({
+  message: "which functions do you want to watch for hot-reload?",
+  choices: [...functionNames.map((f) => ({ value: f }))],
+  required: true,
+});
+
+const esbuildPath = await input({ message: "esbuild path", required: true });
+console.log("esbuild path", esbuildPath);
+
+// console.log("answer", answer);
+
+const commands = answer.map(
+  (a) => `node ./esbuild.js --dir ${artifacts_directory}/${a}`
+);
+console.log("commands", commands);
+
+// nodemon({ exec: commands.join("; ") });
+
+// nodemon.on("restart", (files) => {
+//   console.log("app restarted due to: ", files);
+// });

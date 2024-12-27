@@ -14,7 +14,8 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "commander": "^12.1.0",
+    "@inquirer/prompts": "^7.2.1",
+    "nodemon": "^3.1.9",
     "yaml": "^2.6.1"
   }
 }
