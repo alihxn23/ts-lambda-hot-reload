@@ -1,11 +1,11 @@
 #!/usr/bin/env node
 
-import { checkbox, input, search } from "@inquirer/prompts";
+import { checkbox, search } from "@inquirer/prompts";
+import directoryTree from "directory-tree";
 import fs from "fs";
+import fuzzysort from "fuzzysort";
 import nodemon from "nodemon";
 import YAML from "yaml";
-import fuzzysort from "fuzzysort";
-import directoryTree from "directory-tree";
 
 // calling esbuild
 // node ./${esbuild.js filename} --dir {artifacts_directory}
