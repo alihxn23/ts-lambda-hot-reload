@@ -1,3 +1,3 @@
 ## Running from Command Line
 
-`npx ts-lambda-hot-reload`
+`npx @alihxn/ts-lambda-hot-reload`

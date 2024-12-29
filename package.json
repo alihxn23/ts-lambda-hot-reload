@@ -1,6 +1,6 @@
 {
   "name": "@alihxn/ts-lambda-hot-reload",
-  "version": "1.0.0",
+  "version": "1.0.5",
   "description": "`npx ts-lambda-hot-reload`",
   "main": "index.js",
   "scripts": {
