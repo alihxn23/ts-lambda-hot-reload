@@ -51,7 +51,7 @@ function buildTheThings() {
         outdir: `${artifacts_directory}/${f.Name}`,
       });
     } else if (buildMethod === "makefile") {
-      exec(`make build-${f.Name}`, (err, stdout, stderr) => {
+      exec(`ARTIFACTS_DIR=${artifacts_directory}/${f.Name} make build-${f.Name}`, (err, stdout, stderr) => {
         if (err) {
           console.error(`exec error: ${err}`);
           exit()
