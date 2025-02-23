@@ -1,6 +1,6 @@
 {
   "name": "@alihxn/ts-lambda-hot-reload",
-  "version": "1.0.8",
+  "version": "1.1.0",
   "description": "`npx ts-lambda-hot-reload`",
   "main": "index.js",
   "scripts": {
@@ -18,12 +18,10 @@
   "license": "ISC",
   "dependencies": {
     "@inquirer/prompts": "^7.2.3",
-    "directory-tree": "^3.5.2",
-    "fuzzysort": "^3.1.0",
+    "esbuild": "^0.25.0",
     "nodemon": "^3.1.9",
     "yaml": "^2.7.0"
   },
-  "devDependencies": {},
   "bugs": {
     "url": "https://github.com/alihxn23/ts-lambda-hot-reload/issues"
   },
