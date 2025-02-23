@@ -4,6 +4,7 @@ import { exec } from "child_process";
 import { buildSync } from "esbuild";
 import fs from "fs";
 import nodemon from "nodemon";
+import { exit } from "process";
 import YAML from "yaml";
 
 // calling esbuild
@@ -50,8 +51,13 @@ function buildTheThings() {
         outdir: `${artifacts_directory}/${f.Name}`,
       });
     } else if (buildMethod === "makefile") {
-      console.log("makefile!!!");
-      // TODO: makefile support
+      exec(`make build-${f.Name}`, (err, stdout, stderr) => {
+        if (err) {
+          console.error(`exec error: ${err}`);
+          exit()
+        }
+        console.log(`make output: ${stdout}`);
+      })
     } else {
       console.log("build method not supported");
     }
