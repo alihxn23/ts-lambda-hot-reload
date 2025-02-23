@@ -18,9 +18,7 @@
   "license": "ISC",
   "dependencies": {
     "@inquirer/prompts": "^7.2.3",
-    "directory-tree": "^3.5.2",
     "esbuild": "^0.25.0",
-    "fuzzysort": "^3.1.0",
     "nodemon": "^3.1.9",
     "yaml": "^2.7.0"
   },
