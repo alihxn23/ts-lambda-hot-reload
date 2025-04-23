@@ -20,7 +20,7 @@
     "@inquirer/prompts": "^7.2.3",
     "esbuild": "^0.25.0",
     "nodemon": "^3.1.9",
-    "yaml": "^2.7.0"
+    "yaml": "^2.7.1"
   },
   "bugs": {
     "url": "https://github.com/alihxn23/ts-lambda-hot-reload/issues"
