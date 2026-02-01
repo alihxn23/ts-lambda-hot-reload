@@ -4,7 +4,8 @@
   "description": "`npx ts-lambda-hot-reload`",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "vitest --run",
+    "test:watch": "vitest"
   },
   "type": "module",
   "bin": {
@@ -21,6 +22,11 @@
     "esbuild": "^0.25.0",
     "nodemon": "^3.1.9",
     "yaml": "^2.7.0"
+  },
+  "devDependencies": {
+    "vitest": "^1.0.0",
+    "fast-check": "^3.15.0",
+    "@types/aws-lambda": "^8.10.0"
   },
   "bugs": {
     "url": "https://github.com/alihxn23/ts-lambda-hot-reload/issues"

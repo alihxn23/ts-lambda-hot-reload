@@ -1,0 +1,7 @@
+{
+  "templatePath": "./template.yaml",
+  "logLevel": "info",
+  "defaultFunctions": [],
+  "parallelBuilds": true,
+  "debounceDelay": 300
+}

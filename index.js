@@ -1,106 +1,124 @@
 #!/usr/bin/env node
-import { checkbox } from "@inquirer/prompts";
-import { exec } from "child_process";
-import { buildSync } from "esbuild";
-import fs from "fs";
-import nodemon from "nodemon";
-import { exit } from "process";
-import YAML from "yaml";
-
-// calling esbuild
-// node ./${esbuild.js filename} --dir {artifacts_directory}
+/**
+ * Lambda Hot-Reload Tool
+ * Entry point for the modular hot-reload CLI application
+ */
+import { CLI } from './src/cli.js';
+import { CommandHandler } from './src/command-handler.js';
+import { exec } from 'child_process';
+import { buildSync } from 'esbuild';
+import nodemon from 'nodemon';
+import { exit } from 'process';
 
 const artifacts_directory = `${process.cwd()}/.aws-sam/build`;
-// console.log(artifacts_directory);
 
-// parse template.yaml to extract lambda functions
-const file = fs.readFileSync("./template.yaml", "utf8");
-const yaml = YAML.parse(file, { logLevel: "error" });
-// const functionNames = [];
-const functions = [];
-Object.entries(yaml.Resources).forEach(([k, v]) => {
-  if (v.Type === "AWS::Serverless::Function") {
-    // functionNames.push(k);
-    functions.push({ ...v, Name: k });
-  }
-});
+// Initialize CLI application
+const cli = new CLI();
+let commandHandler = null;
 
-// select lambda functions to hot-reload
-const answer = await checkbox({
-  message: "which functions do you want to watch for hot-reload?",
-  choices: [...functions.map((f) => ({ value: f.Name }))],
-  required: true,
-});
-
-const functionsToBuild = functions.filter((f) => answer.includes(f.Name));
-
-function buildTheThings() {
+// Build function implementation
+function buildTheThings(functionsToBuild, logger) {
   for (let f of functionsToBuild) {
-    const { BuildMethod: buildMethod, BuildProperties: buildProperties } =
-      f.Metadata;
+    const { BuildMethod: buildMethod, BuildProperties: buildProperties } = f.Metadata;
 
-    if (buildMethod === "esbuild") {
-      // convert keys to camelCase
-      let a = {};
-      Object.keys(buildProperties).forEach((k) => {
-        a[k.charAt(0).toLowerCase() + k.slice(1)] = buildProperties[k];
-      });
-      buildSync({
-        ...a,
-        entryPoints: a.entryPoints.map((e) => `${f.Properties.CodeUri}${e}`),
-        outdir: `${artifacts_directory}/${f.Name}`,
-      });
-    } else if (buildMethod === "makefile") {
-      exec(`ARTIFACTS_DIR=${artifacts_directory}/${f.Name} make build-${f.Name}`, (err, stdout, stderr) => {
-        if (err) {
-          console.error(`exec error: ${err}`);
-          exit()
-        }
-        console.log(`make output: ${stdout}`);
-      })
-    } else {
-      console.log("build method not supported");
+    logger.logBuildStart(f.Name);
+    const startTime = Date.now();
+
+    try {
+      if (buildMethod === 'esbuild') {
+        // Convert keys to camelCase
+        let buildProps = {};
+        Object.keys(buildProperties).forEach((k) => {
+          buildProps[k.charAt(0).toLowerCase() + k.slice(1)] = buildProperties[k];
+        });
+        
+        buildSync({
+          ...buildProps,
+          entryPoints: buildProps.entryPoints.map((e) => `${f.Properties.CodeUri}${e}`),
+          outdir: `${artifacts_directory}/${f.Name}`,
+        });
+        
+        const duration = Date.now() - startTime;
+        logger.logBuildComplete(f.Name, true, duration);
+      } else if (buildMethod === 'makefile') {
+        exec(`ARTIFACTS_DIR=${artifacts_directory}/${f.Name} make build-${f.Name}`, (err, stdout) => {
+          const duration = Date.now() - startTime;
+          if (err) {
+            logger.logError(f.Name, `Build failed: ${err.message}`);
+            logger.logBuildComplete(f.Name, false, duration);
+          } else {
+            logger.logBuild(f.Name, `Make output: ${stdout}`);
+            logger.logBuildComplete(f.Name, true, duration);
+          }
+        });
+      } else {
+        logger.logError(f.Name, `Unsupported build method: ${buildMethod}`);
+        logger.logBuildComplete(f.Name, false, Date.now() - startTime);
+      }
+    } catch (error) {
+      const duration = Date.now() - startTime;
+      logger.logError(f.Name, `Build failed: ${error.message}`);
+      logger.logBuildComplete(f.Name, false, duration);
     }
   }
 }
 
-// TODO: if function properties are in globals, merge globals with function properties
-// TODO: cdk
+// Main execution
+async function main() {
+  try {
+    const selectedFunctions = await cli.run();
+    const logger = cli.getLogger();
+    
+    // Initialize command handler
+    commandHandler = new CommandHandler(logger);
+    
+    // Set up command handler events
+    commandHandler.on('restart', () => {
+      logger.logInfo('Manual restart triggered - rebuilding all functions');
+      buildTheThings(selectedFunctions, logger);
+    });
 
-// directory tree for the project
-// const t = directoryTree("./", { exclude: /node_modules/ }).children.map(
-//   (e) => e.path
-// );
+    commandHandler.on('quit', () => {
+      logger.logInfo('Shutting down hot-reload watcher...');
+      commandHandler.stopListening();
+      nodemon.emit('quit');
+      exit(0);
+    });
 
-// path of esbuild file
-// const esbuildPath = await search({
-//   message: "esbuild path",
-//   source: async (input, { signal }) => {
-//     if (!input) {
-//       return [];
-//     }
+    // Start command handler
+    commandHandler.startListening();
+    
+    // Start nodemon with improved configuration
+    nodemon({ 
+      exec: 'echo', 
+      ext: 'js ts',
+      ignore: ['node_modules/**', '.git/**', '.aws-sam/**']
+    });
 
-//     const results =
-//       fuzzysort.go(input, t)?.map((e) => ({ value: e.target })) ?? [];
+    nodemon.on('start', () => {
+      logger.logInfo('Hot-reload watcher started');
+      buildTheThings(selectedFunctions, logger);
+    });
 
-//     return results;
-//   },
-// });
+    nodemon.on('restart', (files) => {
+      logger.logInfo(`Files changed: ${files.join(', ')}`);
+      buildTheThings(selectedFunctions, logger);
+    });
 
-// const commands = answer.map(
-//   (a) => `node ./${esbuildPath} --dir ${artifacts_directory}/${a}`
-// );
+    // Handle graceful shutdown
+    process.on('SIGINT', () => {
+      logger.logInfo('Shutting down hot-reload watcher...');
+      if (commandHandler) {
+        commandHandler.stopListening();
+      }
+      nodemon.emit('quit');
+      exit(0);
+    });
 
-// start nodemon
-// nodemon({ exec: commands.join("; "), ext: "js ts" });
-nodemon({ exec: "echo", ext: "js ts" });
+  } catch (error) {
+    console.error('Failed to start hot-reload tool:', error.message);
+    exit(1);
+  }
+}
 
-nodemon.on("start", () => {
-  console.log("building...");
-  buildTheThings();
-  console.log("build complete!");
-});
-
-// nodemon.on("restart", (files) => {
-//   console.log("app restarted due to: ", files);
-// });
+main();
