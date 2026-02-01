@@ -7,6 +7,7 @@
 import { describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import path from 'path';
+import os from 'os';
 import { BuildManager } from './build-manager.js';
 import { TemplateParser } from './template-parser.js';
 import { ConfigurationManager } from './configuration-manager.js';
@@ -318,7 +319,7 @@ ${largeFunctions}
       await buildManager.buildFunctions(functions);
 
       // Max concurrent should not exceed system CPU count / 2
-      const expectedMax = Math.max(1, Math.floor(require('os').cpus().length / 2));
+      const expectedMax = Math.max(1, Math.floor(os.cpus().length / 2));
       expect(maxConcurrent).toBeLessThanOrEqual(expectedMax + 1); // +1 for timing variations
     });
 

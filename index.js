@@ -5,10 +5,11 @@
  */
 import { CLI } from './src/cli.js';
 import { CommandHandler } from './src/command-handler.js';
-import { exec } from 'child_process';
+import { execFile } from 'child_process';
 import { buildSync } from 'esbuild';
 import nodemon from 'nodemon';
 import { exit } from 'process';
+import path from 'path';
 
 const artifacts_directory = `${process.cwd()}/.aws-sam/build`;
 
@@ -19,7 +20,7 @@ let commandHandler = null;
 // Build function implementation
 function buildTheThings(functionsToBuild, logger) {
   for (let f of functionsToBuild) {
-    const { BuildMethod: buildMethod, BuildProperties: buildProperties } = f.Metadata;
+    const { BuildMethod: buildMethod, BuildProperties: buildProperties = {} } = f.Metadata ?? {};
 
     logger.logBuildStart(f.Name);
     const startTime = Date.now();
@@ -32,25 +33,34 @@ function buildTheThings(functionsToBuild, logger) {
           buildProps[k.charAt(0).toLowerCase() + k.slice(1)] = buildProperties[k];
         });
         
+        const entryPoints = Array.isArray(buildProps.entryPoints) && buildProps.entryPoints.length
+          ? buildProps.entryPoints
+          : ['app.ts'];
+        
         buildSync({
           ...buildProps,
-          entryPoints: buildProps.entryPoints.map((e) => `${f.Properties.CodeUri}${e}`),
-          outdir: `${artifacts_directory}/${f.Name}`,
+          entryPoints: entryPoints.map((e) => path.join(f.Properties.CodeUri, e)),
+          outdir: path.join(artifacts_directory, f.Name),
         });
         
         const duration = Date.now() - startTime;
         logger.logBuildComplete(f.Name, true, duration);
       } else if (buildMethod === 'makefile') {
-        exec(`ARTIFACTS_DIR=${artifacts_directory}/${f.Name} make build-${f.Name}`, (err, stdout) => {
-          const duration = Date.now() - startTime;
-          if (err) {
-            logger.logError(f.Name, `Build failed: ${err.message}`);
-            logger.logBuildComplete(f.Name, false, duration);
-          } else {
-            logger.logBuild(f.Name, `Make output: ${stdout}`);
-            logger.logBuildComplete(f.Name, true, duration);
+        execFile(
+          'make',
+          [`build-${f.Name}`],
+          { env: { ...process.env, ARTIFACTS_DIR: path.join(artifacts_directory, f.Name) } },
+          (err, stdout, stderr) => {
+            const duration = Date.now() - startTime;
+            if (err) {
+              logger.logError(f.Name, `Build failed: ${stderr || err.message}`);
+              logger.logBuildComplete(f.Name, false, duration);
+            } else {
+              logger.logBuild(f.Name, `Make output: ${stdout}`);
+              logger.logBuildComplete(f.Name, true, duration);
+            }
           }
-        });
+        );
       } else {
         logger.logError(f.Name, `Unsupported build method: ${buildMethod}`);
         logger.logBuildComplete(f.Name, false, Date.now() - startTime);
