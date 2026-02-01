@@ -133,6 +133,7 @@ describe('FileWatcher Property-Based Tests', () => {
         });
         fileWatcher.setMaxRestartAttempts(maxAttempts);
         fileWatcher.restartBackoffDelay = baseDelay;
+        vi.spyOn(fileWatcher, 'startWatching').mockImplementation(() => {});
 
         let restartEvents = [];
         let errorEvents = [];

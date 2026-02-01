@@ -144,4 +144,19 @@ dist
 # DS_Store
 .DS_Store
 
+# AWS SAM build artifacts
+.aws-sam/
+
+# IDE settings
+.vscode/
+.idea/
+
+# Kiro IDE settings (user-specific)
+.kiro/settings/
+
+# Test files and examples
+app.ts
+hello-world/
+test-restart-integration.js
+
 # End of https://www.toptal.com/developers/gitignore/api/node

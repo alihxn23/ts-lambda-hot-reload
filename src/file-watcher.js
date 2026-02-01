@@ -212,6 +212,9 @@ export class FileWatcher extends EventEmitter {
         this.debounceTimer = null;
       }
 
+      // Remove all nodemon listeners to prevent accumulation on restart
+      nodemon.removeAllListeners();
+      
       // Stop nodemon
       nodemon.emit('quit');
       

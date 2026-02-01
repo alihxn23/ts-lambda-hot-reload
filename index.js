@@ -18,7 +18,9 @@ const cli = new CLI();
 let commandHandler = null;
 
 // Build function implementation
-function buildTheThings(functionsToBuild, logger) {
+async function buildTheThings(functionsToBuild, logger) {
+  const buildPromises = [];
+
   for (let f of functionsToBuild) {
     const { BuildMethod: buildMethod, BuildProperties: buildProperties = {} } = f.Metadata ?? {};
 
@@ -37,30 +39,37 @@ function buildTheThings(functionsToBuild, logger) {
           ? buildProps.entryPoints
           : ['app.ts'];
         
-        buildSync({
-          ...buildProps,
-          entryPoints: entryPoints.map((e) => path.join(f.Properties.CodeUri, e)),
-          outdir: path.join(artifacts_directory, f.Name),
+        const buildPromise = Promise.resolve().then(() => {
+          buildSync({
+            ...buildProps,
+            entryPoints: entryPoints.map((e) => path.join(f.Properties.CodeUri, e)),
+            outdir: path.join(artifacts_directory, f.Name),
+          });
+          
+          const duration = Date.now() - startTime;
+          logger.logBuildComplete(f.Name, true, duration);
         });
-        
-        const duration = Date.now() - startTime;
-        logger.logBuildComplete(f.Name, true, duration);
+        buildPromises.push(buildPromise);
       } else if (buildMethod === 'makefile') {
-        execFile(
-          'make',
-          [`build-${f.Name}`],
-          { env: { ...process.env, ARTIFACTS_DIR: path.join(artifacts_directory, f.Name) } },
-          (err, stdout, stderr) => {
-            const duration = Date.now() - startTime;
-            if (err) {
-              logger.logError(f.Name, `Build failed: ${stderr || err.message}`);
-              logger.logBuildComplete(f.Name, false, duration);
-            } else {
-              logger.logBuild(f.Name, `Make output: ${stdout}`);
-              logger.logBuildComplete(f.Name, true, duration);
+        const makePromise = new Promise((resolve) => {
+          execFile(
+            'make',
+            [`build-${f.Name}`],
+            { env: { ...process.env, ARTIFACTS_DIR: path.join(artifacts_directory, f.Name) } },
+            (err, stdout, stderr) => {
+              const duration = Date.now() - startTime;
+              if (err) {
+                logger.logError(f.Name, `Build failed: ${stderr || err.message}`);
+                logger.logBuildComplete(f.Name, false, duration);
+              } else {
+                logger.logBuild(f.Name, `Make output: ${stdout}`);
+                logger.logBuildComplete(f.Name, true, duration);
+              }
+              resolve();
             }
-          }
-        );
+          );
+        });
+        buildPromises.push(makePromise);
       } else {
         logger.logError(f.Name, `Unsupported build method: ${buildMethod}`);
         logger.logBuildComplete(f.Name, false, Date.now() - startTime);
@@ -71,6 +80,8 @@ function buildTheThings(functionsToBuild, logger) {
       logger.logBuildComplete(f.Name, false, duration);
     }
   }
+  
+  await Promise.all(buildPromises);
 }
 
 // Main execution
@@ -111,7 +122,8 @@ async function main() {
     });
 
     nodemon.on('restart', (files) => {
-      logger.logInfo(`Files changed: ${files.join(', ')}`);
+      const changedFiles = files?.length ? files.join(', ') : 'unknown';
+      logger.logInfo(`Files changed: ${changedFiles}`);
       buildTheThings(selectedFunctions, logger);
     });
 

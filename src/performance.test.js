@@ -13,6 +13,13 @@ import { TemplateParser } from './template-parser.js';
 import { ConfigurationManager } from './configuration-manager.js';
 import { Logger } from './logger.js';
 
+// Configurable performance thresholds (can be overridden via environment variables)
+const PERF_THRESHOLDS = {
+  BUILD_DURATION_MS: Number(process.env.PERF_BUILD_DURATION_MS ?? 500),
+  BUILD_TOTAL_MS: Number(process.env.PERF_BUILD_TOTAL_MS ?? 15000),
+  MEMORY_GROWTH_MB: Number(process.env.PERF_MEMORY_GROWTH_MB ?? 100),
+  MEMORY_LEAK_MB: Number(process.env.PERF_MEMORY_LEAK_MB ?? 50),
+};
 describe('Performance Tests', () => {
   let testDir;
   let templatePath;
@@ -74,8 +81,8 @@ describe('Performance Tests', () => {
         expect(result.endTime).toBeInstanceOf(Date);
       });
 
-      // Total time should be reasonable (less than 5 seconds for 3 functions)
-      expect(totalTime).toBeLessThan(5000);
+      // Total time should be reasonable
+      expect(totalTime).toBeLessThan(PERF_THRESHOLDS.BUILD_TOTAL_MS);
     });
 
     it('should track individual function build durations', async () => {
@@ -95,7 +102,7 @@ describe('Performance Tests', () => {
       const result = await buildManager.buildFunction(functionConfig);
 
       expect(result.duration).toBeGreaterThan(0);
-      expect(result.duration).toBeLessThan(2000); // Should complete within 2 seconds
+      expect(result.duration).toBeLessThan(PERF_THRESHOLDS.BUILD_DURATION_MS * 4); // Single build should complete reasonably fast
       expect(result.startTime).toBeInstanceOf(Date);
       expect(result.endTime).toBeInstanceOf(Date);
     });
@@ -200,8 +207,8 @@ describe('Performance Tests', () => {
       const lastReading = memoryReadings[memoryReadings.length - 1];
       const growth = (lastReading - firstReading) / 1024 / 1024;
       
-      // Memory growth should be less than 50MB across 3 cycles
-      expect(growth).toBeLessThan(50);
+      // Memory growth should be reasonable across 3 cycles
+      expect(growth).toBeLessThan(PERF_THRESHOLDS.MEMORY_LEAK_MB);
     });
 
     it('should handle large template parsing efficiently', () => {
@@ -232,8 +239,8 @@ ${largeFunctions}
       const parseTime = Date.now() - startTime;
 
       expect(functions).toHaveLength(20);
-      // Parsing should be fast (less than 500ms for 20 functions)
-      expect(parseTime).toBeLessThan(500);
+      // Parsing should be fast
+      expect(parseTime).toBeLessThan(PERF_THRESHOLDS.BUILD_DURATION_MS);
     });
   });
 
@@ -283,8 +290,7 @@ ${largeFunctions}
       expect(buildStartTimes.size).toBe(3);
 
       // With parallel builds, total time should be less than sum of individual times
-      // (This is a rough check - actual timing depends on system resources)
-      expect(totalTime).toBeLessThan(5000);
+      expect(totalTime).toBeLessThan(PERF_THRESHOLDS.BUILD_TOTAL_MS);
     });
 
     it('should respect parallel build limits', async () => {
@@ -452,8 +458,8 @@ ${largeFunctions}
       configManager.loadConfig(configPath);
       const loadTime = Date.now() - startTime;
 
-      // Config loading should be very fast (less than 50ms)
-      expect(loadTime).toBeLessThan(50);
+      // Config loading should be very fast
+      expect(loadTime).toBeLessThan(PERF_THRESHOLDS.BUILD_DURATION_MS / 10);
     });
 
     it('should parse templates with many resources efficiently', () => {

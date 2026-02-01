@@ -100,28 +100,21 @@ export class BuildManager extends EventEmitter {
     // Display initial progress
     this._displayProgress();
 
+    // Create a promise that resolves when all builds complete
+    const allDone = new Promise(resolve => this.once('allBuildsComplete', resolve));
+
     // Start initial builds up to parallel limit
     const initialBuilds = Math.min(this.maxParallelBuilds, functionsToRebuild.length);
-    const buildPromises = [];
 
     for (let i = 0; i < initialBuilds; i++) {
       const func = this.buildQueue.shift();
       if (func) {
-        buildPromises.push(this._buildFunction(func));
+        this._buildFunction(func);
       }
     }
 
-    // Wait for all builds to complete
-    await Promise.all(buildPromises);
-
-    // Display final build summary
-    this._displayBuildSummary();
-
-    this.emit('allBuildsComplete', { 
-      results: this.buildResults,
-      totalFunctions: functionsToRebuild.length,
-      successCount: Array.from(this.buildResults.values()).filter(r => r.success).length
-    });
+    // Wait for all queued builds to complete
+    await allDone;
 
     return this.buildResults;
   }
@@ -206,6 +199,16 @@ export class BuildManager extends EventEmitter {
       if (this.buildQueue.length > 0) {
         const nextFunction = this.buildQueue.shift();
         setImmediate(() => this._buildFunction(nextFunction));
+      }
+
+      // Check if all builds are complete
+      if (this.completedFunctions === this.totalFunctions) {
+        this._displayBuildSummary();
+        this.emit('allBuildsComplete', { 
+          results: this.buildResults,
+          totalFunctions: this.totalFunctions,
+          successCount: Array.from(this.buildResults.values()).filter(r => r.success).length
+        });
       }
     }
 

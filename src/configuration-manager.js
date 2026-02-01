@@ -73,6 +73,7 @@ export class ConfigurationManager extends EventEmitter {
    * console.log('Template path:', config.templatePath);
    */
   loadConfig(configPath) {
+    const previousConfig = this.config;
     try {
       if (!fs.existsSync(configPath)) {
         this.emit('configNotFound', { path: configPath });
@@ -91,12 +92,13 @@ export class ConfigurationManager extends EventEmitter {
         throw new Error(`Unsupported configuration file format: ${ext}`);
       }
 
-      this.config = { ...this.config, ...loadedConfig };
+      this.config = { ...previousConfig, ...loadedConfig };
       this.validateConfig();
       this.emit('configLoaded', { config: this.config, path: configPath });
       
       return this.config;
     } catch (error) {
+      this.config = previousConfig;
       this.emit('configError', { error, path: configPath });
       console.warn(`Failed to load configuration from ${configPath}: ${error.message}`);
       console.warn('Falling back to default configuration');
@@ -188,9 +190,15 @@ export class ConfigurationManager extends EventEmitter {
    * configManager.updateConfig('parallelBuilds', false);
    */
   updateConfig(key, value) {
-    this.config[key] = value;
-    this.validateConfig();
-    this.emit('configUpdated', { key, value });
+    const previousConfig = this.config;
+    this.config = { ...this.config, [key]: value };
+    try {
+      this.validateConfig();
+      this.emit('configUpdated', { key, value });
+    } catch (error) {
+      this.config = previousConfig;
+      throw error;
+    }
   }
 
   /**
