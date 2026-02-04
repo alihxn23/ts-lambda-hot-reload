@@ -21,7 +21,7 @@
     "@inquirer/prompts": "^7.2.3",
     "esbuild": "^0.25.0",
     "nodemon": "^3.1.9",
-    "yaml": "^2.7.0"
+    "yaml": "^2.8.2"
   },
   "devDependencies": {
     "vitest": "^1.0.0",
